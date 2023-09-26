@@ -85,6 +85,7 @@ supported_methods = t.Literal["lbfgs"]
 def minimize_batch(
     batch: ModelIn,
     model: Model,
+    adapter,
     f_max: float = 0.02,
     max_step_size: float = 1.0,
     max_steps: int = 200,
@@ -126,6 +127,11 @@ def minimize_batch(
 
         x_new = x + direction * torch.index_select(t, 0, batch_index)
         batch["positions"] = x_new.view(-1, 3)
+        updated_edges, updated_shifts = adapter.update_edge_index(
+            batch["positions"], batch["batch"]
+        )
+        batch["edge_index"] = updated_edges
+        batch["shifts"] = updated_shifts
         out = model(batch)
         energy = out["interaction_energy"].sum().item() / batch["positions"].shape[0]
         max_per_atom_force = out["forces"].norm(p=2, dim=-1).max().item()

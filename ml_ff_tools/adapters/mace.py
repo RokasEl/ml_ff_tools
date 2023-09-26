@@ -9,6 +9,7 @@ from mace.data.utils import config_from_atoms
 from mace.modules import MACE
 from mace.tools import AtomicNumberTable
 from torch.utils.data import DataLoader
+from torch_nl import compute_neighborlist, compute_neighborlist_n2
 
 from ml_ff_tools.adapters.utils import get_model_dtype
 
@@ -97,6 +98,7 @@ class MACE_Data_Adapter:
             cutoff=self.cutoff,
             device=self.device,
         )
+        self.x0 = None
 
     def get_dataloader(
         self, atoms: ase.Atoms | list[ase.Atoms], batch_size
@@ -114,3 +116,18 @@ class MACE_Data_Adapter:
 
     def batch_to_atoms(self, batch):
         return get_atoms_from_batch(batch, self.z_table)
+
+    def update_edge_index(self, positions, batch_index):
+        num_structs = int(batch_index.max()) + 1
+        cell = (
+            torch.tensor(3 * [0.0, 0.0, 0.0], dtype=self.dtype, device=self.device)
+            .view(3, 3)
+            .repeat(num_structs, 1, 1)
+        )
+        pbc = torch.tensor(
+            [False, False, False], dtype=torch.bool, device=self.device
+        ).repeat(num_structs, 1)
+        edge_index, _, shifts = compute_neighborlist_n2(
+            self.cutoff, positions, cell, pbc, batch_index
+        )
+        return edge_index, shifts

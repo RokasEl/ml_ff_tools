@@ -19,9 +19,9 @@ def main(model_path, data_path):
     )
 
     # pick 10 random configs
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(0)
     rng.shuffle(atoms)
-    atoms = atoms[:64]
+    atoms = atoms[:32]
 
     start_ase = perf_counter()
     relaxed_ase = []
@@ -40,7 +40,8 @@ def main(model_path, data_path):
         relaxed_batch = minimize_batch(
             batch,
             calc.models[0],
-            max_step_size=1,
+            adapter,
+            max_step_size=0.5,
             max_steps=500,
             f_max=0.1,
         )

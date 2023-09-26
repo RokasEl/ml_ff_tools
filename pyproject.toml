@@ -14,7 +14,8 @@ dependencies = [
     "typer[all]>=0.7.0",
     "torch>=1.13.0",
     "mace @ git+https://github.com/ACEsuit/mace.git@develop",
-    "numpy>=1.23.5"
+    "numpy>=1.23.5",
+    "torch_nl"
 ]
 
 [tool.setuptools.packages.find]

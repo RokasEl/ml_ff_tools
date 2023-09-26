@@ -41,7 +41,7 @@ def relax(
     relaxed_atoms = []
     for batch in adapter(atoms, batch_size):
         relaxed_batch = minimize_batch(
-            batch, model, max_step_size=max_step_size, max_steps=max_num_iters
+            batch, model, adapter, max_step_size=max_step_size, max_steps=max_num_iters
         )
         relaxed_atoms.extend(adapter.batch_to_atoms(relaxed_batch))
 

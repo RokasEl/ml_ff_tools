@@ -23,6 +23,8 @@ def test_after_lbfgs_optimization_forces_are_small():
     for atoms in data:
         atoms.positions += rng.normal(size=atoms.positions.shape) * 0.1
     for batch in adapter(data, batch_size=18):
-        relaxed_batch = minimize_batch(batch, model, max_steps=200, max_step_size=1)
+        relaxed_batch = minimize_batch(
+            batch, model, adapter, max_steps=200, max_step_size=1
+        )
         forces = model(relaxed_batch)["forces"].detach().cpu().numpy()
         np.testing.assert_array_less(forces, 0.02)
