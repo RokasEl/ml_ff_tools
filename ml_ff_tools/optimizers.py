@@ -89,6 +89,7 @@ def minimize_batch(
     f_max: float = 0.02,
     max_step_size: float = 1.0,
     max_steps: int = 200,
+    skin_distance: float = 0.1,
     method: supported_methods = "lbfgs",
     **method_kwargs,
 ):
@@ -115,7 +116,7 @@ def minimize_batch(
     print(
         f"{'Step':<10} {'Interaction energy / atom':<40} {'Total Force':<20} {'Max Force':<20}"
     )
-
+    diff = torch.zeros_like(x)
     # BFGS iterations
     for n_iter in range(1, max_steps + 1):
         # ==================================
@@ -127,11 +128,14 @@ def minimize_batch(
 
         x_new = x + direction * torch.index_select(t, 0, batch_index)
         batch["positions"] = x_new.view(-1, 3)
-        updated_edges, updated_shifts = adapter.update_edge_index(
-            batch["positions"], batch["batch"]
-        )
-        batch["edge_index"] = updated_edges
-        batch["shifts"] = updated_shifts
+        if (torch.abs(diff) > skin_distance).any():
+            print("Updating neighbour list")
+            updated_edges, updated_shifts = adapter.update_edge_index(
+                batch["positions"], batch["batch"]
+            )
+            batch["edge_index"] = updated_edges
+            batch["shifts"] = updated_shifts
+            diff = torch.zeros_like(x)
         out = model(batch)
         energy = out["interaction_energy"].sum().item() / batch["positions"].shape[0]
         max_per_atom_force = out["forces"].norm(p=2, dim=-1).max().item()
@@ -140,6 +144,7 @@ def minimize_batch(
 
         # Hessian update
         s = x_new.sub(x)
+        diff += s
         y = gradient_new.sub(gradient)
         hess.update(s, y, batch_index)
 

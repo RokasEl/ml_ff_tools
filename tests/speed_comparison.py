@@ -19,9 +19,9 @@ def main(model_path, data_path):
     )
 
     # pick 10 random configs
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(2023)
     rng.shuffle(atoms)
-    atoms = atoms[:32]
+    atoms = atoms[:64]
 
     start_ase = perf_counter()
     relaxed_ase = []
