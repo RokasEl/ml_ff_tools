@@ -13,7 +13,7 @@ dependencies = [
     "ase>=3.22.1",
     "typer[all]>=0.7.0",
     "torch>=1.13.0",
-    "mace @ git+https://github.com/ACEsuit/mace/tree/develop",
+    "mace @ git+https://github.com/ACEsuit/mace.git@develop",
     "numpy>=1.23.5"
 ]
 
