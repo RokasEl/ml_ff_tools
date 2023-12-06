@@ -131,7 +131,7 @@ def minimize_batch(
         if (torch.abs(diff) > skin_distance).any():
             print("Updating neighbour list")
             updated_edges, updated_shifts = adapter.update_edge_index(
-                batch["positions"], batch["batch"]
+                batch["positions"], batch["batch"], batch["cell"]
             )
             batch["edge_index"] = updated_edges
             batch["shifts"] = updated_shifts

@@ -38,6 +38,8 @@ ml_ff_tools [OPTIONS]
 
 - `--max-step-size`: Max step size for minimization. Default 1.0.
 
+- `--pbc`: Whether to use periodic boundary conditions. Default `False`.
+
 **Example**:
 
 ```

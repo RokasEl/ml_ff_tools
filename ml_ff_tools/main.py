@@ -24,6 +24,8 @@ def relax(
     device: Device = typer.Option(Device.cpu),
     max_num_iters: int = 200,
     max_step_size: float = 1.0,
+    skin_distance: float = 0.1,
+    pbc: bool = False,
 ):
     atoms = aio.read(data_path, index=":", format="extxyz")
     model = torch.load(model_path)
@@ -35,13 +37,18 @@ def relax(
     if model_type == "mace":
         from ml_ff_tools.adapters import MACE_Data_Adapter
 
-        adapter = MACE_Data_Adapter(model)
+        adapter = MACE_Data_Adapter(model, pbc=pbc, skin_distance=skin_distance)
     else:
         raise ValueError("Only mace models supported for now")
     relaxed_atoms = []
     for batch in adapter(atoms, batch_size):
         relaxed_batch = minimize_batch(
-            batch, model, adapter, max_step_size=max_step_size, max_steps=max_num_iters
+            batch,
+            model,
+            adapter,
+            max_step_size=max_step_size,
+            max_steps=max_num_iters,
+            skin_distance=skin_distance,
         )
         relaxed_atoms.extend(adapter.batch_to_atoms(relaxed_batch))
 

@@ -74,7 +74,7 @@ def get_atoms_from_batch(batch, z_table: AtomicNumberTable) -> List[ase.Atoms]:
             .detach()
             .cpu()
             .numpy(),
-            cell=None,
+            cell=batch.cell[batch.ptr[i] : batch.ptr[i + 1], :].detach().cpu().numpy(),
         )
         try:
             atoms.arrays["forces"] = (
@@ -87,11 +87,11 @@ def get_atoms_from_batch(batch, z_table: AtomicNumberTable) -> List[ase.Atoms]:
 
 
 class MACE_Data_Adapter:
-    def __init__(self, model: MACE):
+    def __init__(self, model: MACE, pbc: bool = False, skin_distance: float = 0.1):
         self.dtype = get_model_dtype(model)
         self.device = model.r_max.device
         self.z_table = AtomicNumberTable([int(z) for z in model.atomic_numbers])
-        self.cutoff = model.r_max.item()  # type: ignore
+        self.cutoff = model.r_max.item() + skin_distance  # type: ignore
         self.to_atomic_data = partial(
             convert_atoms_to_atomic_data,
             z_table=self.z_table,
@@ -99,6 +99,7 @@ class MACE_Data_Adapter:
             device=self.device,
         )
         self.x0 = None
+        self.pbc = pbc
 
     def get_dataloader(
         self, atoms: ase.Atoms | list[ase.Atoms], batch_size
@@ -117,7 +118,13 @@ class MACE_Data_Adapter:
     def batch_to_atoms(self, batch):
         return get_atoms_from_batch(batch, self.z_table)
 
-    def update_edge_index(self, positions, batch_index):
+    def update_edge_index(self, positions, batch_index, cell):
+        if self.pbc:
+            return self._update_edge_index_pbc(positions, batch_index, cell)
+        else:
+            return self._update_edge_index_non_pbc(positions, batch_index)
+
+    def _update_edge_index_non_pbc(self, positions, batch_index):
         num_structs = int(batch_index.max()) + 1
         cell = (
             torch.tensor(3 * [0.0, 0.0, 0.0], dtype=self.dtype, device=self.device)
@@ -130,4 +137,15 @@ class MACE_Data_Adapter:
         edge_index, _, shifts = compute_neighborlist_n2(
             self.cutoff, positions, cell, pbc, batch_index
         )
+        return edge_index, shifts
+
+    def _update_edge_index_pbc(self, positions, batch_index, cell):
+        num_structs = int(batch_index.max()) + 1
+        pbc = torch.tensor(
+            [True, True, True], dtype=torch.bool, device=self.device
+        ).repeat(num_structs, 1)
+        edge_index, _, shifts = compute_neighborlist(
+            self.cutoff, positions, cell, pbc, batch_index
+        )
+        shifts = torch.matmul(shifts, cell)
         return edge_index, shifts
